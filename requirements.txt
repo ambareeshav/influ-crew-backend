@@ -1,0 +1,15 @@
+apify_client
+composio_crewai
+crewai
+fastapi
+groq
+jose
+langchain_groq
+openai
+passlib
+pydantic
+python-dotenv
+python_jose
+selenium
+vercel_kv_sdk
+youtube_transcript_api
