@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from composio_crewai import ComposioToolSet, Action, App
-import components.evaluate
+import api.components.evaluate as evaluate
 import json
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -246,11 +246,11 @@ def analyze_influencers(request: AnalysisRequest, current_user: User = Depends(g
         toolset = ComposioToolSet(entity_id=current_user.entity_id)
         toolset.get_entity().get_connection(app=App.GOOGLESHEETS)
         
-        eval_data = components.evaluate.main(request.keyword, request.channels)
+        eval_data = evaluate.main(request.keyword, request.channels)
         
         #print("eval in main---------------", eval_data)
         composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1, Action.GOOGLESHEETS_BATCH_UPDATE])
-        result = components.evaluate.sheets_crew(composio_tools, eval_data)
+        result = evaluate.sheets_crew (composio_tools, eval_data)
         
         return AnalysisResponse(message=str(result))
     except Exception as e:
