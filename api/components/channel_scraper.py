@@ -8,7 +8,7 @@ KEY = os.getenv("APIFY_API_KEY")
 
 client = ApifyClient(KEY)
 # Import custom modules
-import components.summarizer
+import api.components.summarizer as summarizer
 #import components.webdriver
 
 def video_det_store(run, channel_info):
@@ -37,7 +37,7 @@ def video_det_store(run, channel_info):
         # Add video date to the channel's video_dates list
         channel_info[channelId]['video_dates'].append(str((datetime.fromisoformat(video.get('date'))).date()))
         # Get video transcript
-        transcript = components.summarizer.get_transcript(video.get('id'))
+        transcript = summarizer.get_transcript(video.get('id'))
         if transcript is not None:
             full_transcript = ' '.join([item['text'] for item in transcript])
         else:
@@ -49,7 +49,7 @@ def video_det_store(run, channel_info):
             'viewCount': video.get('viewCount'),
             'likeCount': video.get('likes'),
             'commentsCount': video.get('commentsCount'),
-            'summarized_transcript': components.summarizer.summarize(video.get('id')),
+            'summarized_transcript': summarizer.summarize(video.get('id')),
             'full_transcript': full_transcript,
             'duration': video.get('duration'),
             'description': video.get('text'),
