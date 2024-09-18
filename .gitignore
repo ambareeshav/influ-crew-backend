@@ -1,4 +1,4 @@
-/api/.env
+.env
 venv
 /api/__pycache__
 /api/components/__pycache__
