@@ -1,6 +1,11 @@
 # Import necessary libraries
 from apify_client import ApifyClient
-client = ApifyClient("apify_api_R5HTnlZZ4DEfusZP8LOhQRcnxOZXb711mNxf")
+from dotenv import load_dotenv  
+import os
+load_dotenv()
+KEY = os.getenv("APIFY_API_KEY")
+
+client = ApifyClient(KEY)
 def get_channelid(keyword, channels):
   # Define input parameters for YouTube scraper
   run_input = {

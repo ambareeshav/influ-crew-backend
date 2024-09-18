@@ -1,4 +1,5 @@
 import os
+import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
@@ -22,7 +23,7 @@ load_dotenv()
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Add your frontend URL
+    allow_origins=["*"],  # Ensure this URL is correct
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -224,7 +225,7 @@ def authorize_user(current_user: User = Depends(get_current_user)):
             if connection:
                 return AuthResponse(message=f"User {current_user.email} is already authenticated with Google Sheets")
         except Exception as connection_error:
-            print(f"Connection error: {str(connection_error)}")
+            return f"Connection error: {str(connection_error)}"
         
         # If we reach here, either there's no connection or an error occurred
         auth_url = entity.initiate_connection(App.GOOGLESHEETS, redirect_url="http://localhost:3000/auth/callback")
@@ -236,7 +237,7 @@ def authorize_user(current_user: User = Depends(get_current_user)):
             auth_url=auth_url.redirectUrl
         )
     except Exception as e:
-        print(f"Authorization error: {str(e)}")
+        return f"Authorization error: {str(e)}"
         raise HTTPException(status_code=500, detail=f"Error during authorization: {str(e)}")
 
 @app.post("/analyze", response_model=AnalysisResponse)
@@ -247,7 +248,7 @@ def analyze_influencers(request: AnalysisRequest, current_user: User = Depends(g
         
         eval_data = components.evaluate.main(request.keyword, request.channels)
         
-        print("eval in main---------------", eval_data)
+        #print("eval in main---------------", eval_data)
         composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1, Action.GOOGLESHEETS_BATCH_UPDATE])
         result = components.evaluate.sheets_crew(composio_tools, eval_data)
         
@@ -255,6 +256,6 @@ def analyze_influencers(request: AnalysisRequest, current_user: User = Depends(g
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during analysis: {str(e)}")
 
-""" if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) """
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

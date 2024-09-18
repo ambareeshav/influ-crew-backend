@@ -1,12 +1,15 @@
 # Import necessary libraries
-import json
 from apify_client import ApifyClient
 from datetime import datetime
 import os
-client = ApifyClient("apify_api_R5HTnlZZ4DEfusZP8LOhQRcnxOZXb711mNxf")
+from dotenv import load_dotenv
+load_dotenv()
+KEY = os.getenv("APIFY_API_KEY")
+
+client = ApifyClient(KEY)
 # Import custom modules
 import components.summarizer
-import components.webdriver
+#import components.webdriver
 
 def video_det_store(run, channel_info):
     # Iterate through videos in the dataset
@@ -16,17 +19,17 @@ def video_det_store(run, channel_info):
         
         # If channel not in channel_info, add it
         if channelId not in channel_info:
-            try:
+            """ try:
                 # Scrape recent video titles from the channel
                 titles = components.webdriver.scrape_channel(f"{video.get('inputChannelUrl')}/videos")
             except:
-                titles = None
+                titles = None """
             # Initialize channel information
             channel_info[channelId] = {
                 'channel_name': video.get('channelName'),
                 'channel_description_links': video.get('channelDescriptionLinks'),
                 'subscriber_count': video.get('numberOfSubscribers'),
-                'recent_videos': titles,
+                #'recent_videos': titles,
                 'video_dates': [],
                 'videos': []
                 }

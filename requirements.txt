@@ -4,7 +4,7 @@ crewai
 fastapi
 groq
 jose
-langchain_groq
+anthropic
 openai
 passlib
 pydantic
