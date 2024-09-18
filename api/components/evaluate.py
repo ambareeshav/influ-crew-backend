@@ -31,7 +31,7 @@ def sheets_crew(tools, eval_data):
         backstory=(
             "You are part of a influencer evaluation system, your job is to take the evaluation data and write it to google sheets so the user can view the data"
         ),
-        verbose=True,
+        verbose=False,
         tools=tools,
         llm=llm,
     )
@@ -40,14 +40,14 @@ def sheets_crew(tools, eval_data):
     description=f"Create a google sheet to write data to and get the 'spreadsheet_id'",
     agent = write_data_a,
     expected_output="'spreadsheet_id' is returned",
-    verbose = True
+    verbose = False
     )
     write_data= Task(
     context = [create_sheet],
     description=f"Write {eval_data} into the already created google sheet, return only the google sheets link",
     agent = write_data_a,
     expected_output="Link is shared and execution is ended",
-    verbose = True,
+    verbose = False,
     )
 
 
