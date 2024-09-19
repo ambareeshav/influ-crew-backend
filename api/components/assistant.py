@@ -33,7 +33,7 @@ def eval(data):
 
   response = run_assistant(client, assistant_id, thread_id, data)
 
-  #print(response)
+  print(response)
 
   return response
 
