@@ -228,8 +228,8 @@ def analyze_influencers(request: AnalysisRequest, current_user: User = Depends(g
         
         composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1, Action.GOOGLESHEETS_BATCH_UPDATE])
         # STATE - "Writing analysis to google sheets"
+        print("right before crew in main", eval_data)
         result = evaluate.sheets_crew (composio_tools, eval_data)
-        
         return AnalysisResponse(message=str(result))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during analysis: {str(e)}")

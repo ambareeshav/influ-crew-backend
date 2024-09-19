@@ -4,7 +4,9 @@ from .channel_scraper import scrape
 from .assistant import eval
 from datetime import datetime
 from crewai import Agent, Task, Crew, Process
+print("before chatgroq import")
 from langchain_groq import ChatGroq
+print("init chatgroq")
 llm = ChatGroq(model_name='llama3-70b-8192')
 
 def sort(data, channelid):
@@ -24,6 +26,7 @@ def sort(data, channelid):
     return data
 
 def sheets_crew(tools, eval_data):
+    print("in sheets_crew before agent create", tools)
     write_data_agent = Agent(
         role="Google Sheets Manager",
         goal="Create a Google Sheet and write influencer evaluation data to it",
@@ -33,6 +36,7 @@ def sheets_crew(tools, eval_data):
         llm=llm,
         cache = False
     )
+    print("after agent create, task create")
     create_and_write_task = Task(
         description=f"""
         1. Create a new Google Sheet named "Influencer Evaluation".
@@ -44,8 +48,11 @@ def sheets_crew(tools, eval_data):
         agent=write_data_agent,
         expected_output="Google Sheet link"
     )
+    print("my_crew")
     my_crew = Crew(agents=[ write_data_agent], tasks=[create_and_write_task], process= Process.sequential)
+    print("kickoff")
     result = my_crew.kickoff()
+    print("result")
     return result
 
 def main(keyword, channels):
