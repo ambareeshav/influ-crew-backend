@@ -2,6 +2,5 @@
 venv
 /api/__pycache__
 /api/components/__pycache__
-.vercel
 __pycache__
-.replit
+dependencies

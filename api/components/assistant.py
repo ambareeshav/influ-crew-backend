@@ -7,7 +7,7 @@ def run_assistant(client, assistant_id, thread_id, data):
   message = client.beta.threads.messages.create(
     thread_id=thread_id,
     role="user",
-    content=data  
+    content=data
   )
   #Run the thread and poll for completion
   run = client.beta.threads.runs.create_and_poll(

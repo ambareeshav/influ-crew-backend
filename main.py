@@ -13,7 +13,6 @@ from jose import JWTError, jwt
 from typing import Optional, List
 from uuid import uuid4
 from vercel_kv_sdk import KV
-import logging
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -129,34 +128,23 @@ def create_access_token(data: dict):
     return encoded_jwt
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
-    logger.debug(f"Received token: {token}")
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        logger.debug("Attempting to decode token")
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        logger.debug(f"Decoded payload: {payload}")
         email: str = payload.get("sub")
         if not email:
-            logger.warning("No email found in token payload")
+            raise credentials_exception
         token_data = TokenData(email=email)
-    except JWTError as e:
-        logger.error(f"JWT error: {str(e)}")
+    except JWTError:
         raise credentials_exception
-    logger.debug(f"Looking up user with email: {token_data.email}")
     user = get_user_by_email(email=token_data.email)
     if user is None:
-        logger.warning(f"No user found for email: {token_data.email}")
         raise credentials_exception
-    logger.debug(f"User found: {user}")
     return user
-
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 # Add this new route for handling the authorization callback
 @app.get("/auth/callback")
@@ -212,33 +200,23 @@ def read_users_me(current_user: User = Depends(get_current_user)):
 
 @app.get("/crews")
 def get_crews(current_user: User = Depends(get_current_user)):
-    return ["influencer analysis"]
+    return [["Influencer Analysis","Analyzes YouTube influencers based on your companies ICPs"], ["Default1", "-"],[ "Default2", "-"], ["Default3", "-"]]
 
 @app.post("/authorize", response_model=AuthResponse)
 def authorize_user(current_user: User = Depends(get_current_user)):
+    toolset = ComposioToolSet(entity_id=current_user.entity_id)
+    entity = toolset.get_entity()
     try:
-        toolset = ComposioToolSet(entity_id=current_user.entity_id)
-        entity = toolset.get_entity()
+        connection = entity.get_connection(app=App.GOOGLESHEETS)
+        if connection:
+            return AuthResponse(message=f"User {current_user.email} is already authenticated with Google Sheets")
+    except:
+        auth_url = entity.initiate_connection(App.GOOGLESHEETS, redirect_url="")
 
-        try:
-            connection = entity.get_connection(app=App.GOOGLESHEETS)
-            if connection:
-                return AuthResponse(message=f"User {current_user.email} is already authenticated with Google Sheets")
-        except Exception as connection_error:
-            return f"Connection error: {str(connection_error)}"
-        
-        # If we reach here, either there's no connection or an error occurred
-        auth_url = entity.initiate_connection(App.GOOGLESHEETS, redirect_url="http://localhost:3000/auth/callback")
-        if not auth_url or not auth_url.redirectUrl:
-            raise ValueError("Failed to generate authentication URL")
-        
         return AuthResponse(
-            message=f"Please authenticate {App.GOOGLESHEETS} in the browser.",
+            message="Please authenticate Google Sheets in the browser.",
             auth_url=auth_url.redirectUrl
-        )
-    except Exception as e:
-        return f"Authorization error: {str(e)}"
-        raise HTTPException(status_code=500, detail=f"Error during authorization: {str(e)}")
+    )
 
 @app.post("/analyze", response_model=AnalysisResponse)
 def analyze_influencers(request: AnalysisRequest, current_user: User = Depends(get_current_user)):
@@ -249,9 +227,9 @@ def analyze_influencers(request: AnalysisRequest, current_user: User = Depends(g
         eval_data = evaluate.main(request.keyword, request.channels)
         
         composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1, Action.GOOGLESHEETS_BATCH_UPDATE])
+        # STATE - "Writing analysis to google sheets"
         result = evaluate.sheets_crew (composio_tools, eval_data)
         
         return AnalysisResponse(message=str(result))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during analysis: {str(e)}")
-

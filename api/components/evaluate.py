@@ -5,7 +5,6 @@ from .assistant import eval
 from datetime import datetime
 from crewai import Agent, Task, Crew, Process
 from langchain_groq import ChatGroq
-import json
 llm = ChatGroq(model_name='llama3-70b-8192')
 
 def sort(data, channelid):
@@ -25,45 +24,36 @@ def sort(data, channelid):
     return data
 
 def sheets_crew(tools, eval_data):
-    write_data_a = Agent(
-        role="To create a google sheet and write data to it",
-        goal="Data written to google sheets and link of google sheet shared",
-        backstory=(
-            "You are part of a influencer evaluation system, your job is to take the evaluation data and write it to google sheets so the user can view the data"
-        ),
-        verbose=False,
+    write_data_agent = Agent(
+        role="Google Sheets Manager",
+        goal="Create a Google Sheet and write influencer evaluation data to it",
+        backstory="You are responsible for managing data in Google Sheets for an influencer evaluation system.",
+        verbose=True,
         tools=tools,
         llm=llm,
+        cache = False
     )
-    #format = {"Influencer Name", "Relevance", "Impact", "Winnability, Subscribers", "Frequency", "Views", "Rationale", "partnership_ideas"}
-    create_sheet= Task(
-    description=f"Create a google sheet to write data to and get the 'spreadsheet_id'",
-    agent = write_data_a,
-    expected_output="'spreadsheet_id' is returned",
-    verbose = False
+    create_and_write_task = Task(
+        description=f"""
+        1. Create a new Google Sheet named "Influencer Evaluation".
+        2. Extract the 'spreadsheet_id' from the creation response.
+        3. Write the following header row to the sheet as first row:["Influencer Name", "Relevance", "Impact", "Winnability", "Subscribers", "Frequency", "Views", "Rationale", "partnership_ideas"]
+           Now write {eval_data} with the first row as key, write all data in one single tool call
+        5. Return only the Google Sheet link - "https://docs.google.com/spreadsheets/d/<spreadsheetId>"
+        """,
+        agent=write_data_agent,
+        expected_output="Google Sheet link"
     )
-    write_data= Task(
-    context = [create_sheet],
-    description=f"Write {eval_data} into the already created google sheet, return only the google sheets link",
-    agent = write_data_a,
-    expected_output="Link is shared and execution is ended",
-    verbose = False,
-    )
-
-
-    my_crew = Crew(agents=[write_data_a], tasks=[create_sheet, write_data], process= Process.sequential)
+    my_crew = Crew(agents=[ write_data_agent], tasks=[create_and_write_task], process= Process.sequential)
     result = my_crew.kickoff()
-    """ print("result", result)
-    op = write_data.output
-    print(op)
-    print(json.dumps(op.json_dict, indent=2)) """
     return result
 
 def main(keyword, channels):
-    #print("got deets")
+    # STATE - "Searching YouTube"
     # Get links for the keyword
     links = kscraper(keyword, channels)
-    #print("got links", links)
+    channel_no = channels
+    
     eval_data ={}
     # Iterate over each link
     for link in links:
@@ -71,20 +61,18 @@ def main(keyword, channels):
         channel_name = link.split("@")[-1]
         #print(channel_name)
         # Get video details for the channel and save it to a json file
+        
         vid_dets = scrape(link)
         #print("got vid deets")
         # Get the channel ID and sort the video data and save
         channelid = list(vid_dets.keys())[0]
         data = str(sort(vid_dets, channelid))
-
-        """ print("send to ass")
-        print(type(data)) """
-        # Get assistant's response on the data and save it to a json file
+        # STATE - f"Gathering channel {channel_no} data"
+        channel_no+=1
+        # STATE - "Analyzing channel"
         response = eval(data)
-        #print("eval in evaluate file -------------------")
         if channel_name not in eval_data:
             eval_data[channel_name] = response
-        #print("got ass resp",eval_data)
 
     return eval_data
     
