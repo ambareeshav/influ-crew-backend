@@ -9,7 +9,7 @@ KEY = os.getenv("APIFY_API_KEY")
 client = ApifyClient(KEY)
 # Import custom modules
 import api.components.summarizer as summarizer
-#import components.webdriver
+import api.components.webdriver as webdriver
 
 def video_det_store(run, channel_info):
     # Iterate through videos in the dataset
@@ -19,11 +19,11 @@ def video_det_store(run, channel_info):
         
         # If channel not in channel_info, add it
         if channelId not in channel_info:
-            """ try:
+            try:
                 # Scrape recent video titles from the channel
-                titles = components.webdriver.scrape_channel(f"{video.get('inputChannelUrl')}/videos")
+                titles = webdriver.scrape_channel(f"{video.get('inputChannelUrl')}/videos")
             except:
-                titles = None """
+                titles = None
             # Initialize channel information
             channel_info[channelId] = {
                 'channel_name': video.get('channelName'),

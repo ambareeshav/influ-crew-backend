@@ -248,7 +248,6 @@ def analyze_influencers(request: AnalysisRequest, current_user: User = Depends(g
         
         eval_data = evaluate.main(request.keyword, request.channels)
         
-        #print("eval in main---------------", eval_data)
         composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1, Action.GOOGLESHEETS_BATCH_UPDATE])
         result = evaluate.sheets_crew (composio_tools, eval_data)
         

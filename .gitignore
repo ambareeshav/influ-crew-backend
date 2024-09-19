@@ -4,3 +4,4 @@ venv
 /api/components/__pycache__
 .vercel
 __pycache__
+.replit

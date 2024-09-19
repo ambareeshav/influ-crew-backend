@@ -10,7 +10,7 @@ def get_transcript(video_id):
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
         return transcript
     except Exception as e:
-        print(f"An error occurred: {e}")
+        #print(f"An error occurred: {e}")
         return None
 
 #Convert JSON to a string to pass to the LLM
