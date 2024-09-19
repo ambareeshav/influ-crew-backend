@@ -51,7 +51,10 @@ def sheets_crew(tools, eval_data):
     print("my_crew")
     my_crew = Crew(agents=[ write_data_agent], tasks=[create_and_write_task], process= Process.sequential)
     print("kickoff")
-    result = my_crew.kickoff()
+    try:
+        result = my_crew.kickoff()
+    except Exception as e:
+        result = e
     print("result")
     return result
 

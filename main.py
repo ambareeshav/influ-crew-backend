@@ -14,7 +14,7 @@ from typing import Optional, List
 from uuid import uuid4
 from vercel_kv_sdk import KV
 from fastapi.middleware.cors import CORSMiddleware
-
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -124,6 +124,8 @@ def authenticate_user(email: str, password: str):
 
 def create_access_token(data: dict):
     to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)  # Set expiration time
+    to_encode.update({"exp": expire})  # Add expiration to the token payload
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
