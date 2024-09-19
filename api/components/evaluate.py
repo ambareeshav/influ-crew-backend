@@ -31,7 +31,7 @@ def sheets_crew(tools, eval_data):
         role="Google Sheets Manager",
         goal="Create a Google Sheet and write influencer evaluation data to it",
         backstory="You are responsible for managing data in Google Sheets for an influencer evaluation system.",
-        verbose=True,
+        verbose=False,
         tools=tools,
         llm=llm,
         cache = False
