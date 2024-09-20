@@ -66,6 +66,7 @@ def main(keyword, channels, tools):
     # STATE - "Searching YouTube"
     # Get links for the keyword
     links = kscraper(keyword, channels)
+    print("got links")
     channel_no = channels
     
     eval_data ={}
@@ -73,21 +74,22 @@ def main(keyword, channels, tools):
     for link in links:
         # Extract channel name from the link
         channel_name = link.split("@")[-1]
-        #print(channel_name)
+        print(channel_no, channel_name)
         # Get video details for the channel and save it to a json file
         
         vid_dets = cscraper(link)
-        #print("got vid deets")
+        print("got vid deets")
         # Get the channel ID and sort the video data
         channelid = list(vid_dets.keys())[0]
         data = str(sort(vid_dets, channelid))
         # STATE - f"Gathering channel {channel_no} data"
-        channel_no+=1
+        channel_no-=1
         # STATE - "Analyzing channel"
         response = eval(data)
-        print( "response in eval")
+        print("got response")
         if channel_name not in eval_data:
             eval_data[channel_name] = response
+    print("got full eval")
     link = sheets_crew(tools, eval_data)
     return link
     

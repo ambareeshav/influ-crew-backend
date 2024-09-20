@@ -21,7 +21,7 @@ load_dotenv()
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct
+    allow_origins=["https://influ-crew-frontend.vercel.app", "http://localhost:3000"],  # Ensure this URL is correct
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,7 +32,7 @@ kv = KV()
 # Security
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 120
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -43,6 +43,8 @@ class User(BaseModel):
     username: str
     email: str
     entity_id: str
+
+
 
 class UserInDB(User):
     hashed_password: str
@@ -225,7 +227,7 @@ def analyze_influencers(request: AnalysisRequest, current_user: User = Depends(g
         toolset = ComposioToolSet(entity_id=current_user.entity_id)
         toolset.get_entity().get_connection(app=App.GOOGLESHEETS)
         composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1, Action.GOOGLESHEETS_BATCH_UPDATE])
-
+        print("got deets")
         result = evaluate.main(request.keyword, request.channels, composio_tools)
 
         # STATE - "Writing analysis to google sheets"
