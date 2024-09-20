@@ -4,14 +4,10 @@ from .channel_scraper import cscraper
 from .assistant import eval
 from datetime import datetime
 from crewai import Agent, Task, Crew, Process
-print("before chatgroq import")
-from langchain_groq import ChatGroq
-print("init chatgroq")
-#llm = ChatGroq(model_name='llama3-70b-8192')
-from litellm import completion
+""" from litellm import completion
 
 # Configure LiteLLM to use ChatGroq
-completion("groq/llama3-70b-8192", messages=[{"role": "user", "content": "Hello, how are you?"}])
+completion("groq/llama3-70b-8192", messages=[{"role": "user", "content": "Hello, how are you?"}]) """
 
 def sort(data, channelid):
     # Get the videos array and video dates
@@ -49,8 +45,8 @@ def sheets_crew(tools, eval_data):
         1. Create a new Google Sheet named "Influencer Evaluation".
         2. Extract the 'spreadsheet_id' from the creation response.
         3. Write the following header row to the sheet as first row:["Influencer Name", "Relevance", "Impact", "Winnability", "Subscribers", "Frequency", "Views", "Rationale", "partnership_ideas"]
-        4. Now write {eval_data} to the second row with the first row as key,DO NOT WRITE THE RAW INPUT DATA
-        5. Return only the Google Sheet link - "https://docs.google.com/spreadsheets/d/<spreadsheetId>"
+        4. With the header row as key, write {eval_data} to the second row, DO NOT WRITE THE RAW INPUT DATA
+        5. Your response must be only the link that the user can click to go to the sheet like this - https://docs.google.com/spreadsheets/d/<spreadsheetId>
         """,
         agent=write_data_agent,
         expected_output="Google Sheet link"
@@ -62,7 +58,8 @@ def sheets_crew(tools, eval_data):
         result = my_crew.kickoff()
     except Exception as e:
         result = e
-    print(result)
+        print(result)
+    print("result")
     return result
 
 def main(keyword, channels, tools):

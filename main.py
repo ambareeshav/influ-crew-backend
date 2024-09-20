@@ -1,5 +1,4 @@
 import os
-import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
@@ -22,7 +21,7 @@ load_dotenv()
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Ensure this URL is correct
+    allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -202,7 +201,7 @@ def read_users_me(current_user: User = Depends(get_current_user)):
 
 @app.get("/crews")
 def get_crews(current_user: User = Depends(get_current_user)):
-    return [["Influencer Analysis","Analyzes YouTube influencers based on your companies ICPs"], ["Default1", "-"],[ "Default2", "-"], ["Default3", "-"]]
+    return [["Influencer Analysis","Analyzes YouTube influencers based on your companies ICPs", 1], ["Default1", "-", 0],[ "Default2", "-", 0], ["Default3", "-", 0]]
 
 @app.post("/authorize", response_model=AuthResponse)
 def authorize_user(current_user: User = Depends(get_current_user)):
