@@ -3,4 +3,3 @@ venv
 /api/__pycache__
 /api/components/__pycache__
 __pycache__
-dependencies

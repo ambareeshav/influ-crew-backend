@@ -92,7 +92,7 @@ def get_video_det(channel_info, link):
     return channel_info
 
 
-def scrape(link):
+def cscraper(link):
     # Initialize channel_info dictionary
     channel_info = {}
     # Get video details for the given link

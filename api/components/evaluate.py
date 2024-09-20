@@ -1,13 +1,17 @@
 # Import necessary modules
 from .keyword_scraper import kscraper
-from .channel_scraper import scrape
+from .channel_scraper import cscraper
 from .assistant import eval
 from datetime import datetime
 from crewai import Agent, Task, Crew, Process
 print("before chatgroq import")
 from langchain_groq import ChatGroq
 print("init chatgroq")
-llm = ChatGroq(model_name='llama3-70b-8192')
+#llm = ChatGroq(model_name='llama3-70b-8192')
+from litellm import completion
+
+# Configure LiteLLM to use ChatGroq
+completion("groq/llama3-70b-8192", messages=[{"role": "user", "content": "Hello, how are you?"}])
 
 def sort(data, channelid):
     # Get the videos array and video dates
@@ -26,14 +30,17 @@ def sort(data, channelid):
     return data
 
 def sheets_crew(tools, eval_data):
-    print("in sheets_crew before agent create", tools)
+    print("in sheets_crew before agent create")
     write_data_agent = Agent(
         role="Google Sheets Manager",
         goal="Create a Google Sheet and write influencer evaluation data to it",
         backstory="You are responsible for managing data in Google Sheets for an influencer evaluation system.",
         verbose=False,
         tools=tools,
-        llm=llm,
+        llm_config={
+        "provider": "litellm",
+        "model": "groq/llama3-70b-8192"
+    },
         cache = False
     )
     print("after agent create, task create")
@@ -42,7 +49,7 @@ def sheets_crew(tools, eval_data):
         1. Create a new Google Sheet named "Influencer Evaluation".
         2. Extract the 'spreadsheet_id' from the creation response.
         3. Write the following header row to the sheet as first row:["Influencer Name", "Relevance", "Impact", "Winnability", "Subscribers", "Frequency", "Views", "Rationale", "partnership_ideas"]
-           Now write {eval_data} with the first row as key, write all data in one single tool call
+        4. Now write {eval_data} to the second row with the first row as key,DO NOT WRITE THE RAW INPUT DATA
         5. Return only the Google Sheet link - "https://docs.google.com/spreadsheets/d/<spreadsheetId>"
         """,
         agent=write_data_agent,
@@ -55,10 +62,10 @@ def sheets_crew(tools, eval_data):
         result = my_crew.kickoff()
     except Exception as e:
         result = e
-    print("result")
+    print(result)
     return result
 
-def main(keyword, channels):
+def main(keyword, channels, tools):
     # STATE - "Searching YouTube"
     # Get links for the keyword
     links = kscraper(keyword, channels)
@@ -72,19 +79,20 @@ def main(keyword, channels):
         #print(channel_name)
         # Get video details for the channel and save it to a json file
         
-        vid_dets = scrape(link)
+        vid_dets = cscraper(link)
         #print("got vid deets")
-        # Get the channel ID and sort the video data and save
+        # Get the channel ID and sort the video data
         channelid = list(vid_dets.keys())[0]
         data = str(sort(vid_dets, channelid))
         # STATE - f"Gathering channel {channel_no} data"
         channel_no+=1
         # STATE - "Analyzing channel"
         response = eval(data)
+        print( "response in eval")
         if channel_name not in eval_data:
             eval_data[channel_name] = response
-
-    return eval_data
+    link = sheets_crew(tools, eval_data)
+    return link
     
 
 
