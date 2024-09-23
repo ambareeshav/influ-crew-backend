@@ -1,6 +1,9 @@
 from openai import OpenAI
-import time
+import time, os
+from dotenv import load_dotenv
 
+load_dotenv()
+OPENAI_API_KEY = os.environ.get("ASSISTANT_KEY")
 
 def run_assistant(client, assistant_id, thread_id, data):
   #Create message in the thread
@@ -24,7 +27,7 @@ def run_assistant(client, assistant_id, thread_id, data):
 
 def eval(data):
   # Init OpenAI client and assistant ID
-  client = OpenAI()
+  client = OpenAI(api_key = OPENAI_API_KEY)
 
   assistant_id = "asst_bntkhaADDPGSwH54ypsd66u5"
   # Create thread or use existing thread

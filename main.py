@@ -1,27 +1,23 @@
-import os
-from dotenv import load_dotenv
+import os, composio, json, api.components.evaluate as evaluate
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from composio_crewai import ComposioToolSet, Action, App
-import api.components.evaluate as evaluate
-import json
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from typing import Optional, List
 from uuid import uuid4
 from vercel_kv_sdk import KV
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-# Load environment variables
-load_dotenv()
+composio.LogLevel.ERROR
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://influ-crew-frontend.vercel.app", "http://localhost:3000"],  # Ensure this URL is correct
+    allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,8 +39,6 @@ class User(BaseModel):
     username: str
     email: str
     entity_id: str
-
-
 
 class UserInDB(User):
     hashed_password: str
@@ -125,7 +119,7 @@ def authenticate_user(email: str, password: str):
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)  # Set expiration time
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)  # Set expiration time
     to_encode.update({"exp": expire})  # Add expiration to the token payload
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -148,13 +142,6 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     if user is None:
         raise credentials_exception
     return user
-
-# Add this new route for handling the authorization callback
-@app.get("/auth/callback")
-async def auth_callback(code: str, state: str):
-    # Handle the authorization callback here
-    # You may want to exchange the code for tokens and store them
-    return {"message": "Authorization successful. You can close this window."}
 
 # Routes
 @app.post("/signup")
@@ -227,12 +214,10 @@ def analyze_influencers(request: AnalysisRequest, current_user: User = Depends(g
         toolset = ComposioToolSet(entity_id=current_user.entity_id)
         toolset.get_entity().get_connection(app=App.GOOGLESHEETS)
         composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1, Action.GOOGLESHEETS_BATCH_UPDATE])
-        print("got deets")
-        result = evaluate.main(request.keyword, request.channels, composio_tools)
 
-        # STATE - "Writing analysis to google sheets"
-        """ print("right before crew in main", eval_data)
-        result = evaluate.sheets_crew (composio_tools, eval_data) """
+        print("STATE - Received Input")
+        result = evaluate.main(request.keyword, request.channels, composio_tools)
+        
         return AnalysisResponse(message=str(result))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during analysis: {str(e)}")

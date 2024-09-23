@@ -1,8 +1,11 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from groq import Groq
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 #Initialize the LLM
-client = Groq()
+client = Groq(api_key = GROQ_API_KEY)
 
 #Fetch transcript for a given YouTube video id
 def get_transcript(video_id):
