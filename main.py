@@ -1,9 +1,10 @@
-import os, composio, json, api.components.evaluate as evaluate
+import os, composio, json, composio, litellm
+import api.components.evaluate as evaluate
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from composio_crewai import ComposioToolSet, Action, App
+from composio_crewai import ComposioToolSet,App
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from typing import Optional, List
@@ -11,8 +12,11 @@ from uuid import uuid4
 from vercel_kv_sdk import KV
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta, timezone
+from dotenv import load_dotenv
 
+load_dotenv()
 composio.LogLevel.ERROR
+litellm.api_key = os.environ.get("GROQ_API_KEY")
 
 app = FastAPI()
 app.add_middleware(
@@ -143,6 +147,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
     return user
 
+
+
 # Routes
 @app.post("/signup")
 def signup(user_data: SignUpRequest):
@@ -156,7 +162,7 @@ def signup(user_data: SignUpRequest):
     
     entity_id = str(uuid4())
     hashed_password = get_password_hash(user_data.password)
-    user = UserInDB(
+    user = UserInDB(    
         username=user_data.username,
         email=user_data.email,
         hashed_password=hashed_password,
@@ -209,15 +215,18 @@ def authorize_user(current_user: User = Depends(get_current_user)):
     )
 
 @app.post("/analyze", response_model=AnalysisResponse)
-def analyze_influencers(request: AnalysisRequest, current_user: User = Depends(get_current_user)):
-    try:
-        toolset = ComposioToolSet(entity_id=current_user.entity_id)
-        toolset.get_entity().get_connection(app=App.GOOGLESHEETS)
-        composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1, Action.GOOGLESHEETS_BATCH_UPDATE])
+async def analyze_influencers(
+    request: AnalysisRequest,
+    current_user: User = Depends(get_current_user)
+):
+    print("STATE - Received Input")
 
-        print("STATE - Received Input")
-        result = evaluate.main(request.keyword, request.channels, composio_tools)
-        
-        return AnalysisResponse(message=str(result))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error during analysis: {str(e)}")
+    toolset = ComposioToolSet(entity_id=current_user.entity_id)
+    toolset.get_entity().get_connection(app=App.GOOGLESHEETS)
+
+    # Schedule evaluate.main to run in the background
+    link = evaluate.main(request.keyword, request.channels, toolset)
+
+    return AnalysisResponse(message=str(link))
+
+    

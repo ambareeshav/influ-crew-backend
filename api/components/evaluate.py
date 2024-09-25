@@ -4,13 +4,18 @@ from .channel_scraper import cscraper
 from .assistant import eval
 from datetime import datetime
 from crewai import Agent, Task, Crew, Process
-import composio
-import litellm
-import os
+from composio_crewai import Action
+import composio, os, litellm, threading, json
 from dotenv import load_dotenv
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+
+# Initialize once before starting any threads
+
 
 load_dotenv()
-composio.LogLevel.ERROR
+
+composio.LogLevel.FATAL
 litellm.api_key = os.environ.get("GROQ_API_KEY")
 
 def sort(data, channelid):
@@ -29,75 +34,127 @@ def sort(data, channelid):
     # Return the updated data
     return data
 
-def sheets_crew(tools, eval_data):
-    
 
-    print("STATE - Initializing Agent")
-    write_data_agent = Agent(
-        role="Google Sheets Manager",
-        goal="Create a Google Sheet and write influencer evaluation data to it",
-        backstory="You are responsible for managing data in Google Sheets for an influencer evaluation system.",
-        verbose=True,
-        tools=tools,
-        llm = "groq/llama3-70b-8192",
-        cache = False
-    )
-    print("STATE - Initializing Task")
-    create_and_write_task = Task(
-        description=f"""
-        1. Create a new Google Sheet named "Influencer Evaluation".
-        2. Extract the 'spreadsheet_id' from the creation response.
-        3. Write the following header row to the sheet as first row:["Influencer Name", "Relevance", "Impact", "Winnability", "Subscribers", "Frequency", "Views", "Rationale", "partnership_ideas"]
-        4. With the header row as key, write {eval_data} starting from the second row, DO NOT WRITE THE RAW INPUT DATA
-        5. Your response must be only the link that the user can click to go to the sheet like this - https://docs.google.com/spreadsheets/d/<spreadsheetId>
-        """,
-        agent=write_data_agent,
-        expected_output="Google Sheet link",
-        verbose=True
-    )
-    print("STATE - Initializing Crew")
-    my_crew = Crew(agents=[ write_data_agent], tasks=[create_and_write_task], process= Process.sequential)
-    print("STATE - Crew Kickoff")
-    try:
-        result = my_crew.kickoff()
-    except Exception as e:
-        result = e
-        print(result)
-    print("STATE - Analysis Complete")
-    return result
-
-def main(keyword, channels, tools):
-    print("STATE - 'Searching YouTube'")
+def data(keyword, channels, tools, id):
+    print("STATE - Searching YouTube")
     # Get links for the keyword
     links = kscraper(keyword, channels)
     print("STATE - Got Links")
-    channel_no = 1
-    
-    eval_data ={}
+
     # Iterate over each link
-    for link in links:
+    for channel_no, link in enumerate(links):
+        eval_data ={}
+
         # Extract channel name from the link
         channel_name = link.split("@")[-1]
-        print(f"STATE - {channel_no}: {channel_name}")
+        print(f"STATE - {channel_no+1}: {channel_name}")
+
         # Get video details for the channel and save it to a json file
-        
         vid_dets = cscraper(link)
         print(f"STATE - Got {channel_name} Video Details")
+
         # Get the channel ID and sort the video data
         channelid = list(vid_dets.keys())[0]
         data = str(sort(vid_dets, channelid))
         
         print(f"STATE - Analyzing {channel_name}")
         response = eval(data)
+        #print(response)
         print(f"STATE - Analyzed {channel_name}")
-        if channel_name not in eval_data:
-            eval_data[channel_name] = response
-        print(f"STATE - {channel_name} Analysis Stored")  
-        channel_no+=1
-    print(f"STATE - Analysis done for {channel_no} Channels")
-    print(eval_data)
-    link = sheets_crew(tools, eval_data)
-    return link
+
+        eval_data[channel_name] = response
+        #print(eval_data)
+        print(f"STATE - {channel_name} Analysis Stored")
+
+        #sheets_crew(tools, eval_data, id, channel_no+2)
+        """ write_thread = threading.Thread(target=sheets_crew, args=(tools, eval_data, id, channel_no+2))
+        write_thread.start() """
+        
+
+        data = json.loads(eval_data[channel_name])
+
+        # Extract evaluation values (e.g., "irrelevant", "low")
+        evaluation_list = []
+        evaluation_list.append(channel_name)
+        for key, value in data.items():
+            if isinstance(value, dict) and "Evaluation" in value:
+                evaluation_list.append(value["Evaluation"])
+            elif key == "Subscribers":
+                evaluation_list.append(value)  # Extract the subscriber count
+            elif key == "Rationale":
+                evaluation_list.append(value)  # Extract the rationale
+            elif key == "partnership_ideas":
+                evaluation_list.append(value)  # Extract partnership ideas
+
+
+        row = channel_no+2
+
+        write_data_agent = Agent(
+        role="Google Sheets Manager",
+        goal="Write influencer evaluation data to a google sheet",
+        backstory="You are responsible for writing data to Google Sheets as part of an influencer evaluation system. Given a list and google sheets information you will write the list to it",
+        verbose=False,
+        tools=tools,
+        llm = "groq/llama3-70b-8192",
+        cache = False
+        )
+        print("STATE - Initializing Task")
+        write_task = Task(
+            description=f"""
+            1. The data provided is already formatted, your only task is to write to google sheets using the Action.GOOGLESHEETS_BATCH_UPDATE tool
+            2. Write the list {evaluation_list} to row {row} of the google sheet with SpreadshetId {id}
+            3. End execution once data is written
+            """,
+            agent=write_data_agent,
+            expected_output="Input data is written to given row in the given spreadsheet",
+            verbose=False
+        )
+        print("STATE - Initializing Crew")
+        write_crew = Crew(agents=[ write_data_agent], tasks=[write_task], process= Process.sequential)
+        print("STATE - Crew Kickoff")
+        write_crew.kickoff()
+        print(f"STATE - Wrote channel {row-1} eval data to Sheet")
+
+
+    print(f"STATE - Analysis done for {channel_no+1} Channels")
+    #print(eval_data)
     
+def create_sheet(keyword, channels, toolset):
+    composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1, Action.GOOGLESHEETS_BATCH_UPDATE])
+    sheet_header_agent = Agent(
+        role="Google Sheets Manager",
+        goal="Create a Google Sheet and write header data to it",
+        backstory="You are responsible for managing data in Google Sheets for an influencer evaluation system.",
+        verbose=False,
+        tools=composio_tools,
+        llm="groq/llama3-70b-8192"
+    )
+    create_and_write_task = Task(
+        description="""
+        1. Create a new Google Sheet named "Influencer Evaluation".
+        2. Extract the 'spreadsheet_id' from the creation response.
+        3. Write the following header row to the sheet as first row:["Influencer Name", "Relevance", "Impact", "Winnability", "Subscribers", "Frequency", "Views", "Rationale", "partnership_ideas"]
+        4. After writing header data your response must be a link that the user can click to go the created spreadsheet , 
+        """,
+        agent=sheet_header_agent,
+        expected_output="Spreadsheet link is returned",
+        verbose=False
+    )
+    
+    my_crew = Crew(agents=[sheet_header_agent], tasks=[create_and_write_task], process=Process.sequential)
+    link = my_crew.kickoff()
+    id = link.raw.split('/d/')[1].split('/')[0]
+    composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_BATCH_UPDATE])
+    #data(keyword, channels, composio_tools, id)
+    #data(keyword, channels, composio_tools, id)
+    data_thread = threading.Thread(target=data, args=(keyword, channels, composio_tools, id))
+    trace.set_tracer_provider(TracerProvider())
+    data_thread.start()
+    return link
+
+def main(keyword, channels, toolset):
+    link = create_sheet(keyword, channels, toolset)
+    return link
+
 
 
