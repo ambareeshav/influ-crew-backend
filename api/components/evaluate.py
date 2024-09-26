@@ -8,14 +8,12 @@ from composio_crewai import Action
 import composio, os, litellm, threading, json
 from dotenv import load_dotenv
 from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-
 # Initialize once before starting any threads
 
 
 load_dotenv()
 
-composio.LogLevel.FATAL
+composio.LogLevel.DEBUG
 litellm.api_key = os.environ.get("GROQ_API_KEY")
 
 def sort(data, channelid):
@@ -66,10 +64,6 @@ def data(keyword, channels, tools, id):
         #print(eval_data)
         print(f"STATE - {channel_name} Analysis Stored")
 
-        #sheets_crew(tools, eval_data, id, channel_no+2)
-        """ write_thread = threading.Thread(target=sheets_crew, args=(tools, eval_data, id, channel_no+2))
-        write_thread.start() """
-        
 
         data = json.loads(eval_data[channel_name])
 
@@ -78,17 +72,31 @@ def data(keyword, channels, tools, id):
         evaluation_list.append(channel_name)
         for key, value in data.items():
             if isinstance(value, dict) and "Evaluation" in value:
-                evaluation_list.append(value["Evaluation"])
+                evaluation_list.append(str(value["Evaluation"]))  # Convert to string
             elif key == "Subscribers":
-                evaluation_list.append(value)  # Extract the subscriber count
+                evaluation_list.append(str(value))  # Ensure Subscriber count is a string
             elif key == "Rationale":
-                evaluation_list.append(value)  # Extract the rationale
+                evaluation_list.append(value)  # Rationale as a string
             elif key == "partnership_ideas":
-                evaluation_list.append(value)  # Extract partnership ideas
+                # Convert list to string (e.g., join ideas by commas)
+                partnership_ideas_str = "; ".join(value) if isinstance(value, list) else value
+                evaluation_list.append(partnership_ideas_str)
 
+        # Ensure all values in evaluation_list are strings
+        evaluation_list = [str(item) for item in evaluation_list]
 
+        #print(evaluation_list)
         row = channel_no+2
-
+        config = {
+                "validation": {
+                    "ensure_valid_input": True,  # Validate input before passing to the tool
+                    "log_input_on_error": True   # Log the input if an error occurs
+                },
+                "retry": {
+                    "max_attempts": 3,           # Retry the task in case of failure
+                    "backoff_factor": 2          # Exponential backoff in retrying the task
+                }
+}
         write_data_agent = Agent(
         role="Google Sheets Manager",
         goal="Write influencer evaluation data to a google sheet",
@@ -101,13 +109,19 @@ def data(keyword, channels, tools, id):
         print("STATE - Initializing Task")
         write_task = Task(
             description=f"""
-            1. The data provided is already formatted, your only task is to write to google sheets using the Action.GOOGLESHEETS_BATCH_UPDATE tool
-            2. Write the list {evaluation_list} to row {row} of the google sheet with SpreadshetId {id}
-            3. End execution once data is written
+            1. The data provided is already formatted and ready to write, DO NOT ALTER IT, your only task is to write to google sheets using the Action.GOOGLESHEETS_BATCH_UPDATE tool
+            2. Write the entire list {evaluation_list} to row {row} of the google sheet with SpreadshetId {id}, all the data should be in one row.
+            3. The following are the only fields you must include in the Tool Input:
+                "spreadsheet_id": "",
+                "sheet_name": "Sheet1",
+                "values": [],
+                "first_cell_location": ""
+                DO NOT INCLUDE includeValuesInResponse IN THE TOOL INPUT INPUT
             """,
             agent=write_data_agent,
             expected_output="Input data is written to given row in the given spreadsheet",
-            verbose=False
+            verbose=False,
+            config = config
         )
         print("STATE - Initializing Crew")
         write_crew = Crew(agents=[ write_data_agent], tasks=[write_task], process= Process.sequential)
@@ -145,10 +159,7 @@ def create_sheet(keyword, channels, toolset):
     link = my_crew.kickoff()
     id = link.raw.split('/d/')[1].split('/')[0]
     composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_BATCH_UPDATE])
-    #data(keyword, channels, composio_tools, id)
-    #data(keyword, channels, composio_tools, id)
     data_thread = threading.Thread(target=data, args=(keyword, channels, composio_tools, id))
-    trace.set_tracer_provider(TracerProvider())
     data_thread.start()
     return link
 

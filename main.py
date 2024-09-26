@@ -22,6 +22,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct
+    # allow_origins=["*"],  # Ensure this URL is correct
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -92,7 +93,7 @@ def get_user(username: str):
         return UserInDB(**json.loads(user_data))
     
 def get_user_by_email(email: str):
-    all_users_json = kv.get("all_users")
+    all_users_json = kv.get("all")
     if all_users_json:
         all_users = json.loads(all_users_json)
         for username in all_users:
@@ -104,14 +105,14 @@ def get_user_by_email(email: str):
     return None
 
 def get_all_users() -> List[str]:
-    all_users_json = kv.get("all_users")
+    all_users_json = kv.get("all")
     return json.loads(all_users_json) if all_users_json else []
 
 def add_user_to_all_users(username: str):
     all_users = get_all_users()
     if username not in all_users:
         all_users.append(username)
-        kv.set("all_users", json.dumps(all_users))
+        kv.set("all", json.dumps(all_users))
 
 def authenticate_user(email: str, password: str):
     user = get_user_by_email(email)
