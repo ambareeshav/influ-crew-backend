@@ -1,19 +1,18 @@
 # Import necessary modules
-from .keyword_scraper import kscraper
-from .channel_scraper import cscraper
-from .assistant import eval
+from .components.keyword_scraper import kscraper
+from .components.channel_scraper import cscraper
+from .components.assistant import eval
 from datetime import datetime
 from crewai import Agent, Task, Crew, Process
 from composio_crewai import Action
 import composio, os, litellm, threading, json
 from dotenv import load_dotenv
-from opentelemetry import trace
 # Initialize once before starting any threads
 
 
 load_dotenv()
 
-composio.LogLevel.DEBUG
+composio.log
 litellm.api_key = os.environ.get("GROQ_API_KEY")
 
 def sort(data, channelid):
@@ -32,8 +31,7 @@ def sort(data, channelid):
     # Return the updated data
     return data
 
-
-def data(keyword, channels, tools, id):
+def data(keyword, channels, tools, spreadsheet_id, assistant_id):
     print("STATE - Searching YouTube")
     # Get links for the keyword
     links = kscraper(keyword, channels)
@@ -56,7 +54,7 @@ def data(keyword, channels, tools, id):
         data = str(sort(vid_dets, channelid))
         
         print(f"STATE - Analyzing {channel_name}")
-        response = eval(data)
+        response = eval(data, assistant_id)
         #print(response)
         print(f"STATE - Analyzed {channel_name}")
 
@@ -98,19 +96,19 @@ def data(keyword, channels, tools, id):
                 }
 }
         write_data_agent = Agent(
-        role="Google Sheets Manager",
-        goal="Write influencer evaluation data to a google sheet",
-        backstory="You are responsible for writing data to Google Sheets as part of an influencer evaluation system. Given a list and google sheets information you will write the list to it",
-        verbose=False,
-        tools=tools,
-        llm = "groq/llama3-70b-8192",
-        cache = False
+            role="Google Sheets Manager",
+            goal="Write influencer evaluation data to a google sheet",
+            backstory="You are responsible for writing data to Google Sheets as part of an influencer evaluation system. Given a list and google sheets information you will write the list to it",
+            verbose=False,
+            tools=tools,
+            llm = "groq/llama3-70b-8192",
+            cache = False
         )
         print("STATE - Initializing Task")
         write_task = Task(
             description=f"""
             1. The data provided is already formatted and ready to write, DO NOT ALTER IT, your only task is to write to google sheets using the Action.GOOGLESHEETS_BATCH_UPDATE tool
-            2. Write the entire list {evaluation_list} to row {row} of the google sheet with SpreadshetId {id}, all the data should be in one row.
+            2. Write the entire list {evaluation_list} to row {row} of the google sheet with SpreadshetId {spreadsheet_id}, all the data should be in one row.
             3. The following are the only fields you must include in the Tool Input:
                 "spreadsheet_id": "",
                 "sheet_name": "Sheet1",
@@ -133,7 +131,7 @@ def data(keyword, channels, tools, id):
     print(f"STATE - Analysis done for {channel_no+1} Channels")
     #print(eval_data)
     
-def create_sheet(keyword, channels, toolset):
+def run(keyword, channels, toolset, assistant_id):
     composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1, Action.GOOGLESHEETS_BATCH_UPDATE])
     sheet_header_agent = Agent(
         role="Google Sheets Manager",
@@ -157,15 +155,15 @@ def create_sheet(keyword, channels, toolset):
     
     my_crew = Crew(agents=[sheet_header_agent], tasks=[create_and_write_task], process=Process.sequential)
     link = my_crew.kickoff()
-    id = link.raw.split('/d/')[1].split('/')[0]
+    spreadsheet_id = link.raw.split('/d/')[1].split('/')[0]
     composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_BATCH_UPDATE])
-    data_thread = threading.Thread(target=data, args=(keyword, channels, composio_tools, id))
+    data_thread = threading.Thread(target=data, args=(keyword, channels, composio_tools, spreadsheet_id, assistant_id))
     data_thread.start()
     return link
 
-def main(keyword, channels, toolset):
-    link = create_sheet(keyword, channels, toolset)
-    return link
+""" def run(keyword, channels, toolset, assistant_id):
+    link = create_sheet(keyword, channels, toolset, assistant_id)
+    return link """
 
 
 

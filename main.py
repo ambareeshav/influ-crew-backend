@@ -1,5 +1,6 @@
 import os, composio, json, composio, litellm
-import api.components.evaluate as evaluate
+import api.evaluate as evaluate
+import api.instructions as Instructions
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
@@ -13,16 +14,18 @@ from vercel_kv_sdk import KV
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
+from openai import OpenAI
 
 load_dotenv()
 composio.LogLevel.ERROR
 litellm.api_key = os.environ.get("GROQ_API_KEY")
+OPENAI_API_KEY = os.environ.get("ASSISTANT_KEY")
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct
-    # allow_origins=["*"],  # Ensure this URL is correct
+    #allow_origins=["*"],  # Ensure this URL is correct
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,10 +46,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 class User(BaseModel):
     username: str
     email: str
-    entity_id: str
-
+    
 class UserInDB(User):
     hashed_password: str
+    entity_id: str
+    assistant_id: Optional[str] = None
 
 class Token(BaseModel):
     access_token: str
@@ -73,6 +77,12 @@ class AnalysisRequest(BaseModel):
     channels: int
 
 class AnalysisResponse(BaseModel):
+    message: str
+
+class AssistantRequest(BaseModel):
+    name: str
+
+class AssistantResponse(BaseModel):
     message: str
 
 class LoginResponse(BaseModel):
@@ -201,7 +211,9 @@ def get_crews(current_user: User = Depends(get_current_user)):
 
 @app.post("/authorize", response_model=AuthResponse)
 def authorize_user(current_user: User = Depends(get_current_user)):
-    toolset = ComposioToolSet(entity_id=current_user.entity_id)
+
+    User_data = get_user(current_user.username)
+    toolset = ComposioToolSet(entity_id=User_data.entity_id)
     entity = toolset.get_entity()
     try:
         connection = entity.get_connection(app=App.GOOGLESHEETS)
@@ -218,16 +230,54 @@ def authorize_user(current_user: User = Depends(get_current_user)):
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_influencers(
     request: AnalysisRequest,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user)):
     print("STATE - Received Input")
 
-    toolset = ComposioToolSet(entity_id=current_user.entity_id)
+    User_data = get_user(current_user.username)
+    toolset = ComposioToolSet(entity_id=User_data.entity_id)
     toolset.get_entity().get_connection(app=App.GOOGLESHEETS)
-
+    assistant_id = User_data.assistant_id
     # Schedule evaluate.main to run in the background
-    link = evaluate.main(request.keyword, request.channels, toolset)
+    link = evaluate.run(request.keyword, request.channels, toolset, assistant_id)
 
     return AnalysisResponse(message=str(link))
+
+@app.post("/assistant", response_model=AssistantResponse)
+def assistant(
+    request: AssistantRequest,
+    current_user: User = Depends(get_current_user)):
+
+    Ins = Instructions.run(request.name)
+
+    client = OpenAI(api_key = OPENAI_API_KEY)
+    my_assistant = client.beta.assistants.create(
+        instructions=Ins,
+        name=current_user.username,
+        model="gpt-4o-mini",
+        response_format = { "type": "json_object" }
+    )
+    id = str(my_assistant.id)
+
+    data = get_user(current_user.username)
+    updated_user = data.model_copy(update={"assistant_id": id})
+
+    kv.set(f"user:{current_user.username}", json.dumps(updated_user.model_dump()))
+
+    return AssistantResponse(message="Assistant created succesfully")
+    
+@app.post("/assistantCheck", response_model=AssistantResponse)
+def assistant(
+    current_user: UserInDB = Depends(get_current_user)):
+
+    if (current_user.assistant_id):
+        return AssistantResponse(message="Assistant Exists")
+    else:
+        return AssistantResponse(message="None")
+
+   
+
+
+
+
 
     

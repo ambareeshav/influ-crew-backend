@@ -25,11 +25,13 @@ def run_assistant(client, assistant_id, thread_id, data):
 
   return messages.data[0].content[0].text.value
 
-def eval(data):
+def eval(data, id):
   # Init OpenAI client and assistant ID
   client = OpenAI(api_key = OPENAI_API_KEY)
-
-  assistant_id = "asst_bntkhaADDPGSwH54ypsd66u5"
+  if id == None:
+    assistant_id = "asst_bntkhaADDPGSwH54ypsd66u5"
+  else:
+    assistant_id = id
   # Create thread or use existing thread
   thread = client.beta.threads.create()
   thread_id = thread.id

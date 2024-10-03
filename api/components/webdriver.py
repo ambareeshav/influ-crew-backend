@@ -8,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 def scrape_channel(url):
     # Set up Chrome options
     chrome_options = Options()
-    chrome_options.add_argument('--disable-gpu', '--headless')
+    chrome_options.add_argument('--headless')
 
     # Initialize Chrome WebDriver
     driver = webdriver.Chrome(options=chrome_options)
@@ -26,10 +26,9 @@ def scrape_channel(url):
             titles.append(channels[i].text)
     return titles
 
-def main(url):
-    # Call the scrape_channel function
-    scrape_channel(url)
-
+""" if __name__ == "__main__":
+    s = scrape_channel("https://www.youtube.com/@Unbounce/videos")
+    print(s) """
 
 
 
