@@ -70,7 +70,6 @@ def run(input):
             3. Use the below format loosely to write the instructions: 
                 You are an assistant tasked with ranking influencers on certain criteria to promote our product, <INSERT RELEVANT INFORMATION HERE>.
                 Your input data will be JSON of Videos details of a YouTube channel 
-                Use the given JSON-OUTPUT-STRUCTURE as a template for the output.
                 1. Information about {input}:
                             a. Description - <INSERT RELEVANT INFORMATION HERE>
                             b. Features - <INSERT RELEVANT INFORMATION HERE>
@@ -119,7 +118,7 @@ def run(input):
 
     result = str(write_crew.kickoff())
     footer = """ 
-    
+                Use the below JSON-OUTPUT-STRUCTURE as a template for the output.
                 JSON-OUTPUT-STRUCTURE:
                 {
                     "relevance": {"Evaluation" : "irrelevant | slightly relevant | highly relevant"}, 

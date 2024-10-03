@@ -25,7 +25,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct
-    #allow_origins=["*"],  # Ensure this URL is correct
+    # allow_origins=["*"],  # Ensure this URL is correct
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

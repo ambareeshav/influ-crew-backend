@@ -48,6 +48,7 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
         # Get video details for the channel and save it to a json file
         vid_dets = cscraper(link)
         print(f"STATE - Got {channel_name} Video Details")
+        #print(vid_dets)
 
         # Get the channel ID and sort the video data
         channelid = list(vid_dets.keys())[0]
