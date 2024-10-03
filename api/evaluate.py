@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-composio.log
+composio.LogLevel.CRITICAL
 litellm.api_key = os.environ.get("GROQ_API_KEY")
 
 def sort(data, channelid):
