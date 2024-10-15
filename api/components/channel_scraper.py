@@ -7,9 +7,7 @@ import logging
 from typing import Dict, Any  
 
 load_dotenv()
-
-KEY = "apify_api_QSBzzsSVCE1XLwdw9mXemldnfIhXdq0qXCSR"
-
+KEY = os.getenv("APIFY_API_KEY")
 client = ApifyClient(KEY)
 # Import custom modules
 import api.components.summarizer as summarizer
