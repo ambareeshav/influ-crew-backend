@@ -51,7 +51,9 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
         vid_dets = cscraper(link)
         print(f"STATE - Got {channel_name} Video Details")
         #print(vid_dets)
-
+        if not vid_dets:
+            print(f"Skip {channel_name} due to error in storing details")
+            continue
         # Get the channel ID and sort the video data
         try:
             channelid = list(vid_dets.keys())[0]
@@ -109,7 +111,7 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
                 llm = "groq/llama3-70b-8192",
                 cache = False
             )
-            print("STATE - Initializing Task")
+        
             write_task = Task(
                 description=f"""
                 1. The data provided is already formatted and ready to write, DO NOT ALTER IT, your only task is to write to google sheets using the Action.GOOGLESHEETS_BATCH_UPDATE tool
@@ -127,14 +129,12 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
                 verbose=False,
                 config = config
             )
-            print("STATE - Initializing Crew")
+            
             write_crew = Crew(agents=[ write_data_agent], tasks=[write_task], process= Process.sequential)
-            print("STATE - Crew Kickoff")
+          
             write_crew.kickoff()
             print(f"STATE - Wrote channel {row-1} eval data to Sheet")
             row+=1
-        else:
-            evaluation_list = None
         
     print(f"STATE - Analysis done for {channel_no+1} Channels")
     

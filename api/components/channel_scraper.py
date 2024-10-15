@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 import logging  
 from typing import Dict, Any  
 load_dotenv()
-KEY = os.getenv("APIFY_API_KEY")
+""" KEY = os.getenv("APIFY_API_KEY") """
+KEY = "apify_api_QSBzzsSVCE1XLwdw9mXemldnfIhXdq0qXCSR"
 
 client = ApifyClient(KEY)
 # Import custom modules
@@ -19,63 +20,50 @@ logger = logging.getLogger(__name__)
 def video_det_store(run: Dict[str, Any], channel_info: Dict[str, Any]) -> None:  
     # Iterate through videos in the dataset  
     for video in client.dataset(run["defaultDatasetId"]).iterate_items():
-        channelId = video.get('channelUrl').split("/")[-1]
-        
-        # If channel not in channel_info, add it
-        if channelId not in channel_info:
-            """ try:
-                # Scrape recent video titles from the channel
-                titles = webdriver.scrape_channel(f"{video.get('inputChannelUrl')}/videos")
-            except:
-                titles = None 
-                loggging.error("Selenium - )"""
-            # Initialize channel information
-            channel_info[channelId] = {
-                'channel_name': video.get('channelName'),
-                'channel_description_links': video.get('channelDescriptionLinks'),
-                'subscriber_count': video.get('numberOfSubscribers'),
-                #'recent_videos': titles,
-                'video_dates': [],
-                'videos': []
-                }
-         
-        # Add video date to the channel's video_dates list
         try:
-            channel_info[channelId]['video_dates'].append(str((datetime.fromisoformat(video.get('date'))).date()))
-        except Exception as e:
-            logging.error(f"DATE ERROR - {e}")
-        # Get video transcript
-        try:
-            transcript = summarizer.get_transcript(video.get('id'))
-        except Exception as e:
-            transcript = None
-            logger.error(f"FULL TRANSCRIPT ERROR - {e}")  # Replaced print with logger
-        if transcript is not None:
-            full_transcript = ' '.join([item['text'] for item in transcript])
-        else:
-            full_transcript = None
+            channelId = video.get('channelUrl').split("/")[-1]
             
-        try:
-            summarized_transcript = summarizer.summarize(video.get('id'))
+            # If channel not in channel_info, add it
+            if channelId not in channel_info:
+                # Initialize channel information
+                channel_info[channelId] = {
+                    'channel_name': video.get('channelName'),
+                    'channel_description_links': video.get('channelDescriptionLinks'),
+                    'subscriber_count': video.get('numberOfSubscribers'),
+                    'video_dates': [],
+                    'videos': []
+                    }
+            
+            # Add video date to the channel's video_dates list
+            try:
+                channel_info[channelId]['video_dates'].append(str((datetime.fromisoformat(video.get('date'))).date()))
+            except Exception as e:
+                logging.error(f"DATE ERROR - {e}")
+            # Get video transcript
+            
+            try:
+                summarized_transcript = summarizer.summarize(video.get('id'))
+            except Exception as e:
+                summarized_transcript = None
+                logger.error(f"SUMMARIZED TRANSCRIPT ERROR - {e}")  # Replaced print with logger
+            # Add video details to the channel's videos list
+            try:
+                channel_info[channelId]['videos'].append({
+                    'date': str((datetime.fromisoformat(video.get('date'))).date()),
+                    'title': video.get('title'),
+                    'viewCount': video.get('viewCount'),
+                    'likeCount': video.get('likes'),
+                    'commentsCount': video.get('commentsCount'),
+                    'transcript_report': summarized_transcript,
+                    'duration': video.get('duration'),
+                    'description': video.get('text'),
+                    'description_links': video.get('descriptionLinks')
+                })
+            except Exception as e:
+                logger.error(f"ERROR - {e}") 
         except Exception as e:
-            summarized_transcript = None
-            logger.error(f"SUMMARIZED TRANSCRIPT ERROR - {e}")  # Replaced print with logger
-        # Add video details to the channel's videos list
-        try:
-            channel_info[channelId]['videos'].append({
-                'date': str((datetime.fromisoformat(video.get('date'))).date()),
-                'title': video.get('title'),
-                'viewCount': video.get('viewCount'),
-                'likeCount': video.get('likes'),
-                'commentsCount': video.get('commentsCount'),
-                'summarized_transcript': summarized_transcript,
-                'full_transcript': full_transcript,
-                'duration': video.get('duration'),
-                'description': video.get('text'),
-                'description_links': video.get('descriptionLinks')
-            })
-        except Exception as e:
-            logger.error(f"ERROR - {e}")  
+            channel_info = None
+            logger.error(f"store_vid_dets - {e}") 
 
 def get_video_det(channel_info, link):
     # Define input parameters for YouTube scraper
