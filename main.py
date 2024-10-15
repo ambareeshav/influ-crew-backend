@@ -1,3 +1,5 @@
+import composio.utils
+import composio.utils.shared
 import os, composio, json, composio, litellm
 import api.evaluate as evaluate
 import api.instructions as Instructions
@@ -17,15 +19,14 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
-composio.LogLevel.ERROR
 litellm.api_key = os.environ.get("GROQ_API_KEY")
 OPENAI_API_KEY = os.environ.get("ASSISTANT_KEY")
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct
-    # allow_origins=["*"],  # Ensure this URL is correct
+    #allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct
+    allow_origins=["*"],  # Ensure this URL is correct
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -158,8 +159,6 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
     return user
 
-
-
 # Routes
 @app.post("/signup")
 def signup(user_data: SignUpRequest):
@@ -206,7 +205,8 @@ def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 @app.get("/crews")
-def get_crews(current_user: User = Depends(get_current_user)):
+def get_crews():
+    # current_user: User = Depends(get_current_user)
     return [["Influencer Analysis","Analyzes YouTube influencers based on your companies ICPs", 1], ["Default1", "-", 0],[ "Default2", "-", 0], ["Default3", "-", 0]]
 
 @app.post("/authorize", response_model=AuthResponse)
@@ -229,39 +229,42 @@ def authorize_user(current_user: User = Depends(get_current_user)):
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_influencers(
-    request: AnalysisRequest,
-    current_user: User = Depends(get_current_user)):
+    request: AnalysisRequest):
+    #current_user: User = Depends(get_current_user)
     print("STATE - Received Input")
 
-    User_data = get_user(current_user.username)
-    toolset = ComposioToolSet(entity_id=User_data.entity_id)
+    #User_data = get_user(current_user.username)
+    entity_id = "fb95d2c2-b5f8-4712-a008-a82b0d2104ef"
+    toolset = ComposioToolSet(entity_id=entity_id)
     toolset.get_entity().get_connection(app=App.GOOGLESHEETS)
-    assistant_id = User_data.assistant_id
-    # Schedule evaluate.main to run in the background
+
+    User = get_user("Demo")
+    assistant_id = User.assistant_id
+    
     link = evaluate.run(request.keyword, request.channels, toolset, assistant_id)
 
     return AnalysisResponse(message=str(link))
 
 @app.post("/assistant", response_model=AssistantResponse)
 def assistant(
-    request: AssistantRequest,
-    current_user: User = Depends(get_current_user)):
+    request: AssistantRequest):
+    # current_user: User = Depends(get_current_user)
 
     Ins = Instructions.run(request.name)
-
+    username = "Demo"
     client = OpenAI(api_key = OPENAI_API_KEY)
     my_assistant = client.beta.assistants.create(
         instructions=Ins,
-        name=current_user.username,
+        name=username,
         model="gpt-4o-mini",
         response_format = { "type": "json_object" }
     )
     id = str(my_assistant.id)
 
-    data = get_user(current_user.username)
+    data = get_user(username)
     updated_user = data.model_copy(update={"assistant_id": id})
 
-    kv.set(f"user:{current_user.username}", json.dumps(updated_user.model_dump()))
+    kv.set(f"user:{username}", json.dumps(updated_user.model_dump()))
 
     return AssistantResponse(message="Assistant created succesfully")
     
@@ -273,11 +276,3 @@ def assistant(
         return AssistantResponse(message="Assistant Exists")
     else:
         return AssistantResponse(message="None")
-
-   
-
-
-
-
-
-    
