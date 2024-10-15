@@ -9,6 +9,7 @@ from composio_crewai import Action
 import composio, os, litellm, threading, json
 from dotenv import load_dotenv
 import logging
+import gc  # Import garbage collection
 
 load_dotenv()
 
@@ -50,7 +51,7 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
         # Get video details for the channel and save it to a json file
         vid_dets = cscraper(link)
         print(f"STATE - Got {channel_name} Video Details")
-        #print(vid_dets)
+        
         if not vid_dets:
             print(f"Skip {channel_name} due to error in storing details")
             continue
@@ -70,7 +71,6 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
         print(f"STATE - Analyzed {channel_name}")
         if response:
             eval_data[channel_name] = response
-            #print(eval_data)
             print(f"STATE - {channel_name} Analysis Stored")
 
             data = json.loads(eval_data[channel_name])
@@ -136,6 +136,13 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
             print(f"STATE - Wrote channel {row-1} eval data to Sheet")
             row+=1
         
+        # Cleanup video data from memory after processing
+        del vid_dets
+        del eval_data
+        del data
+        del response
+        gc.collect()  # Force garbage collection to free memory
+    
     print(f"STATE - Analysis done for {channel_no+1} Channels")
     
 def run(keyword, channels, toolset, assistant_id):
@@ -149,11 +156,11 @@ def run(keyword, channels, toolset, assistant_id):
         llm="groq/llama3-70b-8192"
     )
     create_and_write_task = Task(
-        description=
+        description= 
         1. Create a new Google Sheet named "Influencer Evaluation".
         2. Extract the 'spreadsheet_id' from the creation response.
         3. Write the following header row to the sheet as first row:["Influencer Name", "Relevance", "Impact", "Winnability", "Subscribers", "Frequency", "Views", "Rationale", "partnership_ideas"]
-        4. After writing header data your response must be a link that the user can click to go the created spreadsheet , 
+        4. After writing header data your response must be a link that the user can click to go the created spreadsheet ,
         ,
         agent=sheet_header_agent,
         expected_output="Spreadsheet link is returned",
@@ -174,6 +181,3 @@ def run(keyword, channels, toolset, assistant_id):
     data_thread = threading.Thread(target=data, args=(keyword, channels, composio_tools, spreadsheet_id, assistant_id))
     data_thread.start()
     return link
-
-
-
