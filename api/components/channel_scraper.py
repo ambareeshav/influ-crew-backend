@@ -1,17 +1,18 @@
+import gc  # Import garbage collection module
 from apify_client import ApifyClient
 from datetime import datetime
 import os
 from dotenv import load_dotenv
 import logging  
 from typing import Dict, Any  
+
 load_dotenv()
-""" KEY = os.getenv("APIFY_API_KEY") """
+
 KEY = "apify_api_QSBzzsSVCE1XLwdw9mXemldnfIhXdq0qXCSR"
 
 client = ApifyClient(KEY)
 # Import custom modules
 import api.components.summarizer as summarizer
-
 
 # Configure logging
 logging.basicConfig(level=logging.ERROR)  
@@ -32,20 +33,21 @@ def video_det_store(run: Dict[str, Any], channel_info: Dict[str, Any]) -> None:
                     'subscriber_count': video.get('numberOfSubscribers'),
                     'video_dates': [],
                     'videos': []
-                    }
+                }
             
             # Add video date to the channel's video_dates list
             try:
                 channel_info[channelId]['video_dates'].append(str((datetime.fromisoformat(video.get('date'))).date()))
             except Exception as e:
                 logging.error(f"DATE ERROR - {e}")
-            # Get video transcript
             
+            # Get video transcript
             try:
                 summarized_transcript = summarizer.summarize(video.get('id'))
             except Exception as e:
                 summarized_transcript = None
                 logger.error(f"SUMMARIZED TRANSCRIPT ERROR - {e}")  # Replaced print with logger
+
             # Add video details to the channel's videos list
             try:
                 channel_info[channelId]['videos'].append({
@@ -61,9 +63,14 @@ def video_det_store(run: Dict[str, Any], channel_info: Dict[str, Any]) -> None:
                 })
             except Exception as e:
                 logger.error(f"ERROR - {e}") 
+
+            # Manually trigger garbage collection to free up memory
+            gc.collect()  # Collect unreferenced objects in the current scope
+
         except Exception as e:
             channel_info = None
             logger.error(f"store_vid_dets - {e}") 
+            gc.collect()  # Trigger GC in case of exceptions too
 
 def get_video_det(channel_info, link):
     # Define input parameters for YouTube scraper
@@ -93,20 +100,27 @@ def get_video_det(channel_info, link):
         "subtitlesLanguage": "any",
         "subtitlesFormat": "srt"
     }
+
     # Run YouTube scraper
     run = client.actor("streamers/youtube-scraper").call(run_input=input)
+
     # Store details of current video in iteration
     print("STATE - Storing Video Details")
     video_det_store(run, channel_info)
 
-    return channel_info
+    # Trigger garbage collection after the entire run
+    gc.collect()
 
+    return channel_info
 
 def cscraper(link):
     # Initialize channel_info dictionary
     channel_info = {}
+
     # Get video details for the given link
     channel_info = get_video_det(channel_info, link)
 
-    return channel_info
+    # Final garbage collection after the entire operation
+    gc.collect()
 
+    return channel_info
