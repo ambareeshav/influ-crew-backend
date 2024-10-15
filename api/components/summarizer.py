@@ -30,9 +30,9 @@ def summarize_text(text):
             messages=[
                 {
                     "role": "system",
-                    "content": """You are a marketing assistant that will help analyze YouTube video transcripts and return detailed reports. 
+                    "content": """You are a marketing assistant that will help analyze YouTube video transcripts and return reports. 
                     These reports will be used to find out if the YouTuber is a relevant influencer. Do not infer anything from the video, use only what is already present in the transcript.
-                    The report should be detailed, with an outline of the video content, any brand deals, and mentions of sponsorships. Keep the summary under 256,000 characters.
+                    The report should have an outline of the video content, any brand deals, and mentions of sponsorships.
                     Extract useful information about sponsorships or products mentioned in the video. Conclude the summary by indicating any existing sponsorships or brand partnerships observed.""",
                 },
                 {
