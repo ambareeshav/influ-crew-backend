@@ -34,15 +34,18 @@ def sort(data, channelid):
     # Return the updated data
     return data
 
+def channel_generator(keyword, channels):
+    """Yield channel links one at a time to minimize memory usage."""
+    links = kscraper(keyword, channels)
+    for channel_no, link in enumerate(links):
+        yield channel_no, link
+
 def data(keyword, channels, tools, spreadsheet_id, assistant_id):
     print("STATE - Searching YouTube")
-    # Get links for the keyword
-    links = kscraper(keyword, channels)
-    print("STATE - Got Links")
-    row = 2
-    # Iterate over each link
-    for channel_no, link in enumerate(links):
-        eval_data ={}
+    
+    # Iterate over each link using the generator
+    for channel_no, link in channel_generator(keyword, channels):
+        eval_data = {}
         
         # Extract channel name from the link
         channel_name = link.split("@")[-1]
@@ -55,12 +58,14 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
         if not vid_dets:
             print(f"Skip {channel_name} due to error in storing details")
             continue
+        
         # Get the channel ID and sort the video data
         try:
             channelid = list(vid_dets.keys())[0]
             data = str(sort(vid_dets, channelid))
         except Exception as e:
             logging.error(f"ERROR SORTING - {e}")
+            continue
         
         print(f"STATE - Analyzing {channel_name}")
         try:
@@ -69,6 +74,7 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
             response = None
             print(f"STATE - Error during analysis: {e}")
         print(f"STATE - Analyzed {channel_name}")
+        
         if response:
             eval_data[channel_name] = response
             print(f"STATE - {channel_name} Analysis Stored")
@@ -101,21 +107,22 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
                     "max_attempts": 3,           # Retry the task in case of failure
                     "backoff_factor": 2          # Exponential backoff in retrying the task
                 }
-                }
+            }
+
             write_data_agent = Agent(
                 role="Google Sheets Manager",
                 goal="Write influencer evaluation data to a google sheet",
                 backstory="You are responsible for writing data to Google Sheets as part of an influencer evaluation system. Given a list and google sheets information you will write the list to it",
                 verbose=False,
                 tools=tools,
-                llm = "groq/llama3-70b-8192",
-                cache = False
+                llm="groq/llama3-70b-8192",
+                cache=False
             )
-        
+
             write_task = Task(
                 description=f"""
                 1. The data provided is already formatted and ready to write, DO NOT ALTER IT, your only task is to write to google sheets using the Action.GOOGLESHEETS_BATCH_UPDATE tool
-                2. Write the entire list {evaluation_list} to {row} of the google sheet with SpreadshetId {spreadsheet_id}, all the data should be in one row.
+                2. Write the entire list {evaluation_list} to {row} of the google sheet with SpreadsheetId {spreadsheet_id}, all the data should be in one row.
                 3. The first element of {evaluation_list} should be always be in A{row}
                 4. The following are the only fields you must include in the Tool Input:
                     "spreadsheet_id": "",
@@ -127,52 +134,23 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
                 agent=write_data_agent,
                 expected_output="Input data is written to given row in the given spreadsheet",
                 verbose=False,
-                config = config
+                config=config
             )
-            
-            write_crew = Crew(agents=[ write_data_agent], tasks=[write_task], process= Process.sequential)
-          
+
+            write_crew = Crew(agents=[write_data_agent], tasks=[write_task], process=Process.sequential)
             write_crew.kickoff()
             print(f"STATE - Wrote channel {row-1} eval data to Sheet")
-            row+=1
+            row += 1
         
         # Cleanup video data from memory after processing
-        del vid_dets
-        del eval_data
-        del data
-        del response
+        del vid_dets, eval_data, data, response
         gc.collect()  # Force garbage collection to free memory
     
     print(f"STATE - Analysis done for {channel_no+1} Channels")
-    
+
 def run(keyword, channels, toolset, assistant_id):
-    """ composio_tools = toolset.get_tools(actions=[Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1, Action.GOOGLESHEETS_BATCH_UPDATE])
-    sheet_header_agent = Agent(
-        role="Google Sheets Manager",
-        goal="Create a Google Sheet and write header data to it",
-        backstory="You are responsible for managing data in Google Sheets for an influencer evaluation system.",
-        verbose=False,
-        tools=composio_tools,
-        llm="groq/llama3-70b-8192"
-    )
-    create_and_write_task = Task(
-        description= 
-        1. Create a new Google Sheet named "Influencer Evaluation".
-        2. Extract the 'spreadsheet_id' from the creation response.
-        3. Write the following header row to the sheet as first row:["Influencer Name", "Relevance", "Impact", "Winnability", "Subscribers", "Frequency", "Views", "Rationale", "partnership_ideas"]
-        4. After writing header data your response must be a link that the user can click to go the created spreadsheet ,
-        ,
-        agent=sheet_header_agent,
-        expected_output="Spreadsheet link is returned",
-        verbose=False
-    )
-    
-    my_crew = Crew(agents=[sheet_header_agent], tasks=[create_and_write_task], process=Process.sequential)
-    link = my_crew.kickoff() """
     link = "https://docs.google.com/spreadsheets/d/1Zc4i5V5e7hKnUXJftCUDD3ISfsUsMml2HTUFnzyJU74"
-    """ spreadsheet_id = link.raw.split('/d/')[1].split('/')[0]  """
     spreadsheet_id = link.split('/d/')[1].split('/')[0] 
-    """ spreadsheet_id = "1puBdTY-ufwDK6iVL4nOjYeJyWkL6QNWU4XyIHYO2REI" """
 
     if not assistant_id:
         assistant_id = "asst_bntkhaADDPGSwH54ypsd66u5"
