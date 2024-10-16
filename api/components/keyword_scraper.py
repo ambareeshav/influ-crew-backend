@@ -6,7 +6,6 @@ import gc  # Import the garbage collection module
 
 load_dotenv()
 KEY = os.getenv("APIFY_API_KEY")
-
 client = ApifyClient(KEY)
 
 # Function to get channel IDs using the YouTube scraper Actor

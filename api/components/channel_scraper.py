@@ -42,11 +42,13 @@ def video_det_store(run: Dict[str, Any], channel_info: Dict[str, Any]) -> None:
                 logging.error(f"DATE ERROR - {e}")
             
             # Get video transcript
-            try:
-                summarized_transcript = summarizer.summarize(video.get('id'))
-            except Exception as e:
-                summarized_transcript = None
-                logger.error(f"SUMMARIZED TRANSCRIPT ERROR - {e}")
+            transcript = summarizer.transcript(video.get('id'))
+            if transcript:
+                try:
+                    summarized_transcript = summarizer.summarize_text(transcript)
+                except Exception as e:
+                    summarized_transcript = None
+                    logger.error(f"SUMMARIZED TRANSCRIPT ERROR - {e}")
 
             # Add video details to the channel's videos list
             try:
@@ -56,6 +58,7 @@ def video_det_store(run: Dict[str, Any], channel_info: Dict[str, Any]) -> None:
                     'viewCount': video.get('viewCount'),
                     'likeCount': video.get('likes'),
                     'commentsCount': video.get('commentsCount'),
+                    'full_transcript': transcript,
                     'transcript_report': summarized_transcript,
                     'duration': video.get('duration'),
                     'description': video.get('text'),
@@ -85,6 +88,7 @@ def get_video_det(channel_info: Dict[str, Any], link: str) -> Dict[str, Any]:
         "isHDR": False,
         "isLive": False,
         "isVR180": False,
+        "lengthFilter": "between420",
         "maxResultStreams": 0,
         "maxResults": 5,
         "maxResultsShorts": 0,

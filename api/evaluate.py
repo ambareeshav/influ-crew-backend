@@ -1,12 +1,11 @@
 # Import necessary modules
-import composio.constants
 from .components.keyword_scraper import kscraper
 from .components.channel_scraper import cscraper
 from .components.assistant import eval
 from datetime import datetime
 from crewai import Agent, Task, Crew, Process
 from composio_crewai import Action
-import composio, os, litellm, threading, json
+import os, litellm, threading, json
 from dotenv import load_dotenv
 import logging
 import gc  # Import garbage collection
@@ -55,19 +54,21 @@ def data(keyword, channels, tools, spreadsheet_id, assistant_id):
         if not vid_dets:
             print(f"Skip {channel_name} due to error in storing details")
             continue
+        
         # Get the channel ID and sort the video data
         try:
             channelid = list(vid_dets.keys())[0]
             data = str(sort(vid_dets, channelid))
         except Exception as e:
+            data = None
             logging.error(f"ERROR SORTING - {e}")
-        
+
         print(f"STATE - Analyzing {channel_name}")
-        try:
+        if data:
             response = eval(data, assistant_id)
-        except Exception as e:
-            response = None
-            print(f"STATE - Error during analysis: {e}")
+        else:
+            response = eval(vid_dets, assistant_id)
+        
         print(f"STATE - Analyzed {channel_name}")
         if response:
             eval_data[channel_name] = response
@@ -172,7 +173,6 @@ def run(keyword, channels, toolset, assistant_id):
     link = "https://docs.google.com/spreadsheets/d/1Zc4i5V5e7hKnUXJftCUDD3ISfsUsMml2HTUFnzyJU74"
     """ spreadsheet_id = link.raw.split('/d/')[1].split('/')[0]  """
     spreadsheet_id = link.split('/d/')[1].split('/')[0] 
-    """ spreadsheet_id = "1puBdTY-ufwDK6iVL4nOjYeJyWkL6QNWU4XyIHYO2REI" """
 
     if not assistant_id:
         assistant_id = "asst_bntkhaADDPGSwH54ypsd66u5"

@@ -15,14 +15,10 @@ client = Groq(api_key=GROQ_API_KEY)
 def get_transcript(video_id):
     try:
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        return transcript
+        return " ".join([item['text'] for item in transcript])
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
-
-# Convert JSON to a string to pass to the LLM
-def transcript_to_text(transcript):
-    return " ".join([item['text'] for item in transcript])
 
 def summarize_text(text):
     try:
@@ -30,9 +26,9 @@ def summarize_text(text):
             messages=[
                 {
                     "role": "system",
-                    "content": """You are a marketing assistant that will help analyze YouTube video transcripts and return reports. 
+                    "content": """You are a marketing assistant that will help analyze YouTube channels by summarizing transcripts and returning reports. Keep the report short but informative.
                     These reports will be used to find out if the YouTuber is a relevant influencer. Do not infer anything from the video, use only what is already present in the transcript.
-                    The report should have an outline of the video content, any brand deals, and mentions of sponsorships.
+                    The report should have a short outline of the video content, any brand deals, and mentions of sponsorships.
                     Extract useful information about sponsorships or products mentioned in the video. Conclude the summary by indicating any existing sponsorships or brand partnerships observed.""",
                 },
                 {
@@ -47,24 +43,12 @@ def summarize_text(text):
         print(f"Error during summarization: {e}")
         return None
 
-def summarize(video_id):
+def transcript(video_id):
     # Fetch transcript
     transcript = get_transcript(video_id)
 
-    # Check if transcript is available and summarize if yes, else return None
     if transcript:
-        transcript_text = transcript_to_text(transcript)
-
-        # Free up memory from the transcript object
-        del transcript
         gc.collect()  # Force garbage collection
-
-        summary = summarize_text(transcript_text)
-
-        # Free up memory from the transcript text
-        del transcript_text
-        gc.collect()  # Force garbage collection
-
-        return summary
+        return transcript
     else:
         return None
