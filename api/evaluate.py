@@ -1,8 +1,7 @@
 # Import necessary modules
 from .components.keyword_scraper import kscraper
 from .components.channel_scraper import cscraper
-from .components.assistant import analyze
-from datetime import datetime
+from .components.assistant import eval as analyze
 from crewai import Agent, Task, Crew, Process
 from composio_crewai import Action
 from composio.utils.logging import setup, LogLevel
