@@ -1,14 +1,12 @@
-# Import necessary libraries
 from apify_client import ApifyClient
 from dotenv import load_dotenv  
-import os
-import gc  # Import the garbage collection module
+import os, gc 
 
 load_dotenv()
 KEY = os.getenv("APIFY_API_KEY")
 client = ApifyClient(KEY)
 
-# Function to get channel IDs using the YouTube scraper Actor
+# Get channel IDs using the YouTube scraper Actor
 def get_channelid(keyword, channels):
     # Define input parameters for YouTube scraper
     run_input = {
@@ -24,7 +22,7 @@ def get_channelid(keyword, channels):
     run = client.actor("streamers/youtube-scraper").call(run_input=run_input)
     return run
 
-# Function to scrape channel URLs
+# Extract links from raw api data
 def kscraper(keyword, channels):
     links = []
     
@@ -35,12 +33,9 @@ def kscraper(keyword, channels):
     for item in client.dataset(run["defaultDatasetId"]).iterate_items():
         links.append(item.get("channelUrl"))
     
-    # Clean up the 'run' variable after processing
+    # Clean up the variables after processing
     del run
-    gc.collect()  # Trigger garbage collection manually
-
-    # Clean up each 'item' after the iteration (optional)
     del item
-    gc.collect()
+    gc.collect()  # Trigger garbage collection 
 
     return links

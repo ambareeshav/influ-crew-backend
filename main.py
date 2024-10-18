@@ -15,18 +15,15 @@ from uuid import uuid4
 from vercel_kv_sdk import KV
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta, timezone
-from dotenv import load_dotenv
 from openai import OpenAI
 
-load_dotenv()
 litellm.api_key = os.environ.get("GROQ_API_KEY")
 OPENAI_API_KEY = os.environ.get("ASSISTANT_KEY")
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    #allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct
-    allow_origins=["*"],  # Ensure this URL is correct
+    allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -204,17 +201,21 @@ def login(login_data: LoginRequest):
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+# Returns Crews and their availability
 @app.get("/crews")
 def get_crews():
-    # current_user: User = Depends(get_current_user)
     return [["Influencer Analysis","Analyzes YouTube influencers based on your companies ICPs", 1], ["Default1", "-", 0],[ "Default2", "-", 0], ["Default3", "-", 0]]
 
+# Initiate connection with Composio and Google Sheets
 @app.post("/authorize", response_model=AuthResponse)
 def authorize_user(current_user: User = Depends(get_current_user)):
 
     User_data = get_user(current_user.username)
+
     toolset = ComposioToolSet(entity_id=User_data.entity_id)
     entity = toolset.get_entity()
+
+    # Check for existing connection, if not pop up to authorize
     try:
         connection = entity.get_connection(app=App.GOOGLESHEETS)
         if connection:
@@ -229,16 +230,14 @@ def authorize_user(current_user: User = Depends(get_current_user)):
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_influencers(
-    request: AnalysisRequest):
-    #current_user: User = Depends(get_current_user)
-    print("STATE - Received Input")
+    request: AnalysisRequest,
+    current_user: User = Depends(get_current_user)):
 
-    #User_data = get_user(current_user.username)
-    entity_id = "fb95d2c2-b5f8-4712-a008-a82b0d2104ef"
+    User_data = get_user(current_user.username)
+    entity_id = User_data.entity_id
     toolset = ComposioToolSet(entity_id=entity_id)
     toolset.get_entity().get_connection(app=App.GOOGLESHEETS)
 
-    User = get_user("Demo")
     assistant_id = User.assistant_id
     
     link = evaluate.run(request.keyword, request.channels, toolset, assistant_id)
@@ -247,11 +246,11 @@ async def analyze_influencers(
 
 @app.post("/assistant", response_model=AssistantResponse)
 def assistant(
-    request: AssistantRequest):
-    # current_user: User = Depends(get_current_user)
-
+    request: AssistantRequest,
+    current_user: User = Depends(get_current_user)):
+    
     Ins = Instructions.run(request.name)
-    username = "Demo"
+    username = User.username
     client = OpenAI(api_key = OPENAI_API_KEY)
     my_assistant = client.beta.assistants.create(
         instructions=Ins,
