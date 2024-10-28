@@ -60,6 +60,8 @@ def video_det_store(run: Dict[str, Any], channel_info: Dict[str, Any]) -> None:
         
         # Manually trigger garbage collection after processing each video to free up memory
         gc.collect()
+
+
 @retry(wait=wait_exponential(min=1, max=10), stop=stop_after_attempt(5), retry=retry_if_exception_type(Exception))
 def get_video_det(channel_info: Dict[str, Any], link: str) -> Dict[str, Any]:
     # Define input parameters for YouTube scraper
@@ -91,7 +93,10 @@ def get_video_det(channel_info: Dict[str, Any], link: str) -> Dict[str, Any]:
     run = client.actor("streamers/youtube-scraper").call(run_input=input)
 
     # Store details of current video in iteration
-    video_det_store(run, channel_info)
+    try:
+        video_det_store(run, channel_info)
+    except Exception as e:
+        logger.error(f'ERROR STORING - {e}')
     return channel_info
 
 def cscraper(link: str) -> Dict[str, Any]:
@@ -99,8 +104,11 @@ def cscraper(link: str) -> Dict[str, Any]:
     channel_info = {}
 
     # Get video details for the given link
-    channel_info = get_video_det(channel_info, link)
-
+    try:
+        channel_info = get_video_det(channel_info, link)
+    except Exception as e:
+        logger.error(f"Error getting details - {e}")
+        channel_info = None
     # Final garbage collection after the entire operation
     gc.collect()
 

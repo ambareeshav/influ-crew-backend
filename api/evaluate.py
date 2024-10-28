@@ -23,7 +23,7 @@ def data(keyword, channel, tools, spreadsheet_id, assistant_id):
 
     row = 2
     # Iterate over each link
-    for channel_no, link in enumerate(links):
+    for link in (links):
         # Init empty dict for storing channel data
         channel_data ={}
         
@@ -32,9 +32,16 @@ def data(keyword, channel, tools, spreadsheet_id, assistant_id):
 
         # Get video details for the channel 
         channel_data = cscraper(link)
+        if not channel_data:
+            continue
 
         # Send details to assistant to analyze and store in a dict
-        response = analyze(str(vid_dets), assistant_id)
+        try:
+            response = analyze(str(channel_data), assistant_id)
+        except Exception as e:
+            logger.error(f"ERROR DURING ANALYSIS - {e}")
+            continue
+        eval_data =  {}
         eval_data[channel_name] = response
         data = json.loads(eval_data[channel_name])
 
@@ -98,7 +105,6 @@ def data(keyword, channel, tools, spreadsheet_id, assistant_id):
         row+=1
         
         # Cleanup video data from memory after processing
-        del vid_dets
         del eval_data
         del response
         gc.collect()  # Garbage collection to free memory

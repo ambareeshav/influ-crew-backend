@@ -23,7 +23,7 @@ OPENAI_API_KEY = os.environ.get("ASSISTANT_KEY")
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct
+    allow_origins=["https://influ-crew-frontend.vercel.app"],  # Ensure this URL is correct - 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -238,7 +238,7 @@ async def analyze_influencers(
     toolset = ComposioToolSet(entity_id=entity_id)
     toolset.get_entity().get_connection(app=App.GOOGLESHEETS)
 
-    assistant_id = User.assistant_id
+    assistant_id = "asst_bntkhaADDPGSwH54ypsd66u5"
     
     link = evaluate.run(request.keyword, request.channels, toolset, assistant_id)
 
