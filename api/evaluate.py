@@ -124,7 +124,7 @@ def run(keyword, channels, toolset, assistant_id):
 
     create_and_write_task = Task(
         description= 
-     """1. Create a new Google Sheet named "Influencer Evaluation".
+     f"""1. Create a new Google Sheet named {keyword}.
         2. Extract the 'spreadsheet_id' from the creation response.
         3. Write the following header row to the sheet as first row:["Channel", "Influencer Name", "Relevance", "Impact", "Winnability", "Subscribers", "Frequency", "Views", "Rationale", "partnership_ideas"]
         4. After writing header data your response must be a link that the user can click to go the created spreadsheet """
