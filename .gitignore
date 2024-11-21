@@ -1,9 +1,7 @@
+/venv
 .env
-.venv
-/api/__pycache__
-/api/components/__pycache__
-__pycache__
+.vscode
+*__pycache__
 /requirements.txt_
 /dependency-tree.txt
 /test.py
-.vercel
