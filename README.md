@@ -7,6 +7,7 @@ This is a sophisticated Node.js backend designed to streamline the process of id
 - **YouTube Data Extraction**: Scrapes detailed information from YouTube videos based on specified keywords.
 - **Company Profile Analysis**: Evaluates potential collaborators by comparing extracted data with your company's profile.
 - **Business Profile Generation**: Creates a comprehensive business profile by researching the provided company name.
+- **Automated Data Logging**: As each channel is evaluated and ranked, the data is written into a shared Google Sheet, enhancing transparency and collaboration among team members. [Output](https://docs.google.com/spreadsheets/d/1Zc4i5V5e7hKnUXJftCUDD3ISfsUsMml2HTUFnzyJU74/edit?usp=sharing)
 
 ## Technologies Used
 
