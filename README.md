@@ -1,6 +1,6 @@
 # Multi Agentic system for Analyzing Influencers
 
-This is a sophisticated Node.js backend designed to streamline the process of identifying and analyzing potential YouTube collaborators for your company. By inputting a keyword, the system searches YouTube for relevant videos and gathers comprehensive data, including likes, views, comment counts, transcripts, video length, sponsors, description links, and social links. This data is then analyzed against your company's profile to determine the suitability of potential collaborations. Additionally, the system can generate a business profile by researching your company's name.
+This is a python backend built with fastAPI designed to streamline the process of identifying and analyzing potential YouTube collaborators for your company. By inputting a keyword, the system searches YouTube for relevant videos and gathers comprehensive data, including likes, views, comment counts, transcripts, video length, sponsors, description links, and social links. This data is then analyzed against your company's profile to determine the suitability of potential collaborations. Additionally, the system can generate a business profile by researching your company's name.
 
 ## Key Features
 
